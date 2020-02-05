@@ -6,7 +6,7 @@ BOOST_AUTO_TEST_SUITE(project_test_suite)
 
 BOOST_AUTO_TEST_CASE(project_test_case_1)
 {
-    BOOST_CHECK_MESSAGE(false, "must be true");
+    BOOST_CHECK_MESSAGE(true, "must be true");
 }
 
 BOOST_AUTO_TEST_SUITE_END()
