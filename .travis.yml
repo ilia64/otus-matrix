@@ -9,10 +9,10 @@ addons:
 script:
   - cmake .
   - cmake --build .
-  - cmake --build . --target test
+  - cmake --build . --target project_test
   - cmake --build . --target package
   - ls -ila
-  - clang --version
+  - ls -ila test
 deploy:
   provider: script
   skip_cleanup: true
