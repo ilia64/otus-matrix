@@ -1,14 +1,16 @@
 #include <iostream>
 
-#include "matrix.h"
+#include "prototype.h"
 
 int main()
 {
-    matrix<int, -99> m;
+    Matrix<int, -99> matrix;
 
-    m[0][2] = 22;
-    std::cout << m[0][2] << std::endl;
-    std::cout << m[0][1] << std::endl;
-    std::cout << m.size() << std::endl;
+	matrix(0, 2) = 22;
+    std::cout << matrix(0, 2).get() << std::endl;
+    std::cout << matrix.size() << std::endl;
+	matrix(0, 2) = -99;
+    std::cout << matrix(0, 2).get() << std::endl;
+	std::cout << matrix.size() << std::endl;
     return 0;
 }
