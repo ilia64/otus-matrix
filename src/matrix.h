@@ -9,9 +9,14 @@ public:
 	explicit IteratorRow() = delete;
 	explicit IteratorRow(size_t position = 0) : _position(position) {}
 
-
-
-
+	bool operator== (const IteratorRow& rhs)
+	{
+		return _position == rhs._position;
+	}
+	bool operator!= (const IteratorRow& rhs)
+	{
+		return _position != rhs._position;
+	}
 
 private:
 	size_t _position;
