@@ -2,36 +2,74 @@
 
 #include <map>
 
-template<typename T, T Default>
-class IteratorRow
+template<typename DataIterator, typename T, T Default>
+class Iterator
 {
 public:
-	explicit IteratorRow() = delete;
-	explicit IteratorRow(size_t position = 0) : _position(position) {}
+	explicit Iterator() = default;
+	explicit Iterator(DataIterator iterator, size_t position, size_t end)
+	: _iterator(iterator)
+	, _position(position)
+	, _end(end)
+	{}
 
-	bool operator== (const IteratorRow& rhs)
+	bool operator== (const Iterator& rhs)
 	{
 		return _position == rhs._position;
 	}
-	bool operator!= (const IteratorRow& rhs)
+
+	bool operator!= (const Iterator& rhs)
 	{
 		return _position != rhs._position;
 	}
 
+	T& operator*()
+	{
+		return (_position == _iterator->first) ? _iterator->second : _default;
+	}
+
+	Iterator& operator++() //++a
+	{
+		incPosition();
+		return *this;
+	}
+
+	Iterator operator++(int) //a++
+	{
+		Iterator temp{_iterator, _position, _end};
+		incPosition();
+		return temp;
+	}
+
 private:
+	void incPosition()
+	{
+		++_position;
+		if (_position < _end && _position > _iterator->first)
+		{
+			++_iterator;
+		}
+	}
+
+private:
+	DataIterator _iterator;
 	size_t _position;
+	size_t _end;
+	T _default = Default;
 };
 
 template<typename T, T Default>
-class Rows
+class List
 {
 public:
-	using Data = std::map<size_t, T>;
+	using Map = std::map<size_t, T>;
+	using MapIterator = typename Map::iterator;
+	using IteratorType = Iterator<MapIterator, T, Default>;
 
 	auto get(size_t i) const
 	{
-		auto iter = data.find(i);
-		if (iter == data.end())
+		auto iter = _map.find(i);
+		if (iter == _map.end())
 		{
 			return _default;
 		}
@@ -40,18 +78,18 @@ public:
 
 	void set(size_t i, T value)
 	{
-		auto iter = data.find(i);
-		if (iter == data.end())
+		auto iter = _map.find(i);
+		if (iter == _map.end())
 		{
 			if (!isDefault(value))
 			{
-				data.emplace(i, value);
+				_map.emplace(i, value);
 			}
 			return;
 		}
 		if (isDefault(value))
 		{
-			data.erase(iter);
+			_map.erase(iter);
 			return;
 		}
 		iter->second = value;
@@ -59,11 +97,11 @@ public:
 
 	size_t size() const
 	{
-		if (data.begin() == data.end())
+		if (_map.begin() == _map.end())
 		{
 			return 0;
 		}
-		return data.rbegin()->first + 1;
+		return _map.rbegin()->first + 1;
 	}
 
 	bool isDefault(T value)
@@ -71,19 +109,24 @@ public:
 		return value == _default;
 	}
 
-	auto begin()
+	IteratorType begin()
 	{
-		return IteratorRow<T, Default>{};
+		return IteratorType{_map.begin(), 0, size()};
 	}
 
-	auto end(size_t maxSize = -1)
+	IteratorType end()
 	{
-		maxSize = maxSize == -1 ? size() : maxSize;
-		return IteratorRow<T, Default>{maxSize};
+		auto iterEnd = size();
+		return IteratorType{_map.end(), iterEnd, iterEnd};
+	}
+
+	IteratorType end(size_t maxSize)
+	{
+		return IteratorType{_map.end(), maxSize, size()};
 	}
 
 private:
-	Data data;
+	Map _map;
 	T _default = Default;
 };
 
