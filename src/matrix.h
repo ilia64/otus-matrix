@@ -1,6 +1,7 @@
 #pragma once
 
 #include <map>
+#include <ostream>
 
 template<typename DataIterator, typename T, T Default>
 class Iterator
@@ -41,6 +42,11 @@ public:
 		return temp;
 	}
 
+    std::ostream &operator<<(std::ostream &os)
+    {
+        return os << *(*this);
+    }
+
 private:
 	void incPosition()
 	{
@@ -69,11 +75,7 @@ public:
 	auto get(size_t i) const
 	{
 		auto iter = _map.find(i);
-		if (iter == _map.end())
-		{
-			return _default;
-		}
-		return iter->second;
+        return iter == _map.end() ? _default : iter->second;
 	}
 
 	void set(size_t i, T value)
@@ -97,11 +99,7 @@ public:
 
 	size_t size() const
 	{
-		if (_map.begin() == _map.end())
-		{
-			return 0;
-		}
-		return _map.rbegin()->first + 1;
+        return _map.begin() == _map.end() ? 0 : _map.rbegin()->first + 1;
 	}
 
 	bool isDefault(T value)
@@ -125,39 +123,107 @@ public:
 		return IteratorType{_map.end(), maxSize, size()};
 	}
 
+
+
 private:
 	Map _map;
 	T _default = Default;
 };
 
-template<typename T, T Default, bool Columns = true>
+template <typename Matrix, typename T>
+class ValueProxy
+{
+public:
+    explicit ValueProxy(Matrix& matrix, size_t x): _matrix(matrix), _x(x) {}
+
+    auto& operator[](size_t y)
+    {
+        _y = y;
+        return *this;
+    }
+
+    const auto& get()
+    {
+        return _matrix->get(_x, _y);
+    }
+
+    bool operator==(const T& other) const
+    {
+        return get() == other;
+    }
+
+    bool operator==(const ValueProxy& other) const
+    {
+        return _x == other._x && _y == other._y;
+    }
+
+    ValueProxy& operator=(T value)
+    {
+        _matrix->set(_x, _y, value);
+    }
+
+private:
+    Matrix& _matrix;
+    size_t _x;
+    size_t _y;
+};
+
+template<typename T, T Default>
 class matrix
 {
 public:
-	using DataValue = matrix<T, Default, Columns>;
-	using Data = std::map<size_t, DataValue>;
+	using MapValueType = List<T, Default>;
+	using Map = std::map<size_t, MapValueType>;
 
-	auto& operator[](size_t i)
+	auto operator[](size_t x)
 	{
-		auto iter = data.find(i);
-		if (iter == data.end())
-		{
-			data.emplace(i, DataValue{});
-			return data[i];
-		}
-		return iter->second;
+		return ValueProxy{*this, x};
 	}
 
-	size_t size() const
-	{
-		size_t result = 0;
-		for(const auto& p : data)
-		{
-			result += p.second.size();
-		}
-		return result;
-	}
+    T& get(size_t x, size_t y) const
+    {
+        auto iter = data.find(x);
+        if (iter == data.end())
+        {
+            return Default;
+        }
+        return iter->second.get(y);
+    }
+
+    void set(size_t x, size_t y, T value)
+    {
+        auto iter = data.find(x);
+        if (iter == data.end())
+        {
+            if (value != Default)
+            {
+                auto& list = data[x];
+                list.set(y, value);
+            }
+            return;
+        }
+        iter->second.set(y, value);
+        if (iter.second.size() == 0)
+        {
+            data.erase(iter);
+        }
+    }
+
+    size_t width() const
+    {
+        return data.begin() == data.end() ? 0 : data.rbegin()->first + 1;
+    }
+
+    size_t height() const
+    {
+        size_t result = 0;
+        for(const auto& p : data)
+        {
+            result += p.second.size();
+        }
+        return result;
+    }
 
 private:
-	 Data data;
+	 Map data;
 };
