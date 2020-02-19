@@ -47,6 +47,8 @@ BOOST_AUTO_TEST_SUITE(project_test_suite)
 				assert(value == v[i++]);
 			}
 		}
+
+		std::cout << list;
 	}
 
 	BOOST_AUTO_TEST_CASE(project_test_iterator_list_out_end)
@@ -73,6 +75,24 @@ BOOST_AUTO_TEST_SUITE(project_test_suite)
 			v.emplace_back(*iter);
 		}
 		assert(v.size() == 10);
+	}
+
+	BOOST_AUTO_TEST_CASE(project_test_matrix_rect)
+	{
+		matrix<int, -1> m;
+
+		assert(m.width() == 0);
+		assert(m.height() == 0);
+
+		m[9][5] = 12;
+
+		assert(m.width() == 10);
+		assert(m.height() == 6);
+
+		m[9][5] = -1;
+
+		assert(m.width() == 0);
+		assert(m.height() == 0);
 	}
 
 BOOST_AUTO_TEST_SUITE_END()

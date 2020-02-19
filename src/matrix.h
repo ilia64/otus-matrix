@@ -42,11 +42,6 @@ public:
 		return temp;
 	}
 
-    std::ostream &operator<<(std::ostream &os)
-    {
-        return os << *(*this);
-    }
-
 private:
 	void incPosition()
 	{
@@ -123,8 +118,6 @@ public:
 		return IteratorType{_map.end(), maxSize, size()};
 	}
 
-
-
 private:
 	Map _map;
 	T _default = Default;
@@ -144,7 +137,7 @@ public:
 
     const auto& get()
     {
-        return _matrix->get(_x, _y);
+        return _matrix.get(_x, _y);
     }
 
     bool operator==(const T& other) const
@@ -159,7 +152,8 @@ public:
 
     ValueProxy& operator=(T value)
     {
-        _matrix->set(_x, _y, value);
+        _matrix.set(_x, _y, value);
+		return *this;
     }
 
 private:
@@ -172,18 +166,19 @@ template<typename T, T Default>
 class matrix
 {
 public:
+	using Type = matrix<T, Default>;
 	using MapValueType = List<T, Default>;
 	using Map = std::map<size_t, MapValueType>;
 
 	auto operator[](size_t x)
 	{
-		return ValueProxy{*this, x};
+		return ValueProxy<Type, T>{*this, x};
 	}
 
     T& get(size_t x, size_t y) const
     {
-        auto iter = data.find(x);
-        if (iter == data.end())
+        auto iter = _map.find(x);
+        if (iter == _map.end())
         {
             return Default;
         }
@@ -192,32 +187,32 @@ public:
 
     void set(size_t x, size_t y, T value)
     {
-        auto iter = data.find(x);
-        if (iter == data.end())
+        auto iter = _map.find(x);
+        if (iter == _map.end())
         {
             if (value != Default)
             {
-                auto& list = data[x];
+                auto& list = _map[x];
                 list.set(y, value);
             }
             return;
         }
         iter->second.set(y, value);
-        if (iter.second.size() == 0)
+        if (iter->second.size() == 0)
         {
-            data.erase(iter);
+            _map.erase(iter);
         }
     }
 
     size_t width() const
     {
-        return data.begin() == data.end() ? 0 : data.rbegin()->first + 1;
+        return _map.begin() == _map.end() ? 0 : _map.rbegin()->first + 1;
     }
 
     size_t height() const
     {
         size_t result = 0;
-        for(const auto& p : data)
+        for(const auto& p : _map)
         {
             result += p.second.size();
         }
@@ -225,5 +220,21 @@ public:
     }
 
 private:
-	 Map data;
+	 Map _map;
 };
+
+template<typename T, T Default>
+std::ostream &operator<<(std::ostream &os, List<T, Default>& list)
+{
+	bool needSpace = false;
+	for (const auto& value : list)
+	{
+		if (needSpace)
+		{
+			os << ' ';
+		}
+		os << value;
+		needSpace = true;
+	}
+	return os;
+}
