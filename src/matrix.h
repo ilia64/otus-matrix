@@ -163,10 +163,10 @@ private:
 };
 
 template<typename T, T Default>
-class matrix
+class Matrix
 {
 public:
-	using Type = matrix<T, Default>;
+	using Type = Matrix<T, Default>;
 	using MapValueType = List<T, Default>;
 	using Map = std::map<size_t, MapValueType>;
 
