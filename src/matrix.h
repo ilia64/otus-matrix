@@ -2,6 +2,46 @@
 
 #include <map>
 #include <ostream>
+#include <sstream>
+
+template <typename Matrix, typename T>
+class ValueProxy
+{
+public:
+    explicit ValueProxy(Matrix& matrix, size_t x): _matrix(matrix), _x(x) {}
+
+    auto& operator[](size_t y)
+    {
+        _y = y;
+        return *this;
+    }
+
+    const auto& get()
+    {
+        return _matrix.get(_x, _y);
+    }
+
+    bool operator==(const T& other) const
+    {
+        return get() == other;
+    }
+
+    bool operator==(const ValueProxy& other) const
+    {
+        return _x == other._x && _y == other._y;
+    }
+
+    ValueProxy& operator=(T value)
+    {
+        _matrix.set(_x, _y, value);
+        return *this;
+    }
+
+private:
+    Matrix& _matrix;
+    size_t _x;
+    size_t _y;
+};
 
 template<typename DataIterator, typename T, T Default>
 class Iterator
@@ -93,6 +133,11 @@ public:
 	}
 
 	size_t size() const
+    {
+	    return _map.size();
+    }
+
+	size_t length() const
 	{
         return _map.begin() == _map.end() ? 0 : _map.rbegin()->first + 1;
 	}
@@ -109,57 +154,38 @@ public:
 
 	IteratorType end()
 	{
-		auto iterEnd = size();
-		return IteratorType{_map.end(), iterEnd, iterEnd};
+		auto length = size();
+		return IteratorType{_map.end(), length, length};
 	}
 
-	IteratorType end(size_t maxSize)
+	IteratorType end(size_t length)
 	{
-		return IteratorType{_map.end(), maxSize, size()};
+		return IteratorType{_map.end(), length, size()};
 	}
+
+	std::string toString(size_t length) const
+    {
+        std::stringstream ss;
+        auto iter = begin();
+        auto _end = end(length);
+        bool space = false;
+
+	    while (iter != _end)
+        {
+            ss << *iter;
+            if (space)
+            {
+                ss << ' ';
+            }
+            space = true;
+        }
+
+	    return ss.str();
+    }
 
 private:
 	Map _map;
 	T _default = Default;
-};
-
-template <typename Matrix, typename T>
-class ValueProxy
-{
-public:
-    explicit ValueProxy(Matrix& matrix, size_t x): _matrix(matrix), _x(x) {}
-
-    auto& operator[](size_t y)
-    {
-        _y = y;
-        return *this;
-    }
-
-    const auto& get()
-    {
-        return _matrix.get(_x, _y);
-    }
-
-    bool operator==(const T& other) const
-    {
-        return get() == other;
-    }
-
-    bool operator==(const ValueProxy& other) const
-    {
-        return _x == other._x && _y == other._y;
-    }
-
-    ValueProxy& operator=(T value)
-    {
-        _matrix.set(_x, _y, value);
-		return *this;
-    }
-
-private:
-    Matrix& _matrix;
-    size_t _x;
-    size_t _y;
 };
 
 template<typename T, T Default>
@@ -169,6 +195,8 @@ public:
 	using Type = Matrix<T, Default>;
 	using MapValueType = List<T, Default>;
 	using Map = std::map<size_t, MapValueType>;
+    using MapIterator = typename Map::iterator;
+    using IteratorType = Iterator<MapIterator, T, Default>;
 
 	auto operator[](size_t x)
 	{
@@ -204,6 +232,16 @@ public:
         }
     }
 
+    size_t size()
+    {
+	    size_t result = 0;
+        for (const auto& p : _map)
+        {
+            result += p.second.size();
+        }
+	    return result;
+    }
+
     size_t width() const
     {
         return _map.begin() == _map.end() ? 0 : _map.rbegin()->first + 1;
@@ -214,9 +252,19 @@ public:
         size_t result = 0;
         for(const auto& p : _map)
         {
-            result += p.second.size();
+            result += p.second.length();
         }
         return result;
+    }
+
+    auto begin()
+    {
+        _map.begin();
+    }
+
+    auto end()
+    {
+        _map.end();
     }
 
 private:

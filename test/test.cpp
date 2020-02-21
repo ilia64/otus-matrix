@@ -16,12 +16,12 @@ BOOST_AUTO_TEST_SUITE(project_test_suite)
 		list.set(10, 20);
 		assert(list.get(10) == 20);
 		assert(list.get(1) == -1);
-		assert(list.size() == 11);
+		assert(list.length() == 11);
 
 		list.set(10, -1);
 		assert(list.get(10) == -1);
 		assert(list.get(0) == -1);
-		assert(list.size() == 0);
+		assert(list.length() == 0);
 	}
 
 	BOOST_AUTO_TEST_CASE(project_test_iterator_row)
@@ -79,7 +79,7 @@ BOOST_AUTO_TEST_SUITE(project_test_suite)
 
 	BOOST_AUTO_TEST_CASE(project_test_matrix_rect)
 	{
-		matrix<int, -1> m;
+		Matrix<int, -1> m;
 
 		assert(m.width() == 0);
 		assert(m.height() == 0);
