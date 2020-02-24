@@ -9,14 +9,14 @@ class Value
 public:
 	using Key = std::array<size_t, Depth>;
 
-private :
-	Key _key;
-	Matrix* _matrix;
-	size_t _index;
-
-public:
 	Value() = delete;
-	explicit Value(Matrix* matrix, size_t i) : _key({i}), _matrix(matrix), _index(1)
+
+	explicit Value(Matrix* matrix, Key key) : _matrix(matrix), _key(key), _index(Depth)
+	{
+		static_assert(Depth > 0, "Empty depth");
+	}
+
+	explicit Value(Matrix* matrix, size_t i) : _matrix(matrix), _key({i}), _index(1)
 	{
 		static_assert(Depth > 0, "Empty depth");
 	}
@@ -41,6 +41,16 @@ public:
 		_matrix->set(_key, value);
 		return value;
 	}
+
+	bool operator==(const T& value) const
+	{
+		return get() == value;
+	}
+
+private :
+	Matrix* _matrix;
+	Key _key;
+	size_t _index;
 };
 
 template<typename Matrix, typename T, size_t Depth = 2>
@@ -52,17 +62,19 @@ std::ostream &operator<<(std::ostream &out, const Value<Matrix, T, Depth>& value
 template<typename T, T Default, size_t Depth = 2>
 class Matrix
 {
+public:
 	using Key = std::array<size_t, Depth>;
 	using Map = std::map<Key, T>;
 
-private:
-	Map _map;
-	const T _default = Default;
-
-public:
 	auto operator[](size_t i)
 	{
 		return Value<Matrix, T, Depth>(this, i);
+	}
+
+	template<typename ...Args>
+	auto operator()(Args... args)
+	{
+		return Value<Matrix, T, Depth>(this, {size_t(args)...});
 	}
 
     const T& get(const Key& key) const
@@ -102,11 +114,15 @@ public:
 
     auto begin()
     {
-        _map.begin();
+        return _map.begin();
     }
 
     auto end()
     {
-        _map.end();
+		return _map.end();
     }
+
+private:
+	Map _map;
+	const T _default = Default;
 };
