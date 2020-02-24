@@ -1,260 +1,103 @@
 #pragma once
 
+#include <array>
 #include <map>
-#include <ostream>
-#include <sstream>
 
-template <typename Matrix, typename T>
-class ValueProxy
+template<typename Matrix, typename T, size_t Depth = 2>
+class Value
 {
 public:
-    explicit ValueProxy(Matrix& matrix, size_t x): _matrix(matrix), _x(x) {}
+	using Key = std::array<size_t, Depth>;
 
-    auto& operator[](size_t y)
-    {
-        _y = y;
-        return *this;
-    }
+private :
+	Key _key;
+	Matrix* _matrix;
+	size_t _index;
 
-    const auto& get()
-    {
-        return _matrix.get(_x, _y);
-    }
-
-    bool operator==(const T& other) const
-    {
-        return get() == other;
-    }
-
-    bool operator==(const ValueProxy& other) const
-    {
-        return _x == other._x && _y == other._y;
-    }
-
-    ValueProxy& operator=(T value)
-    {
-        _matrix.set(_x, _y, value);
-        return *this;
-    }
-
-private:
-    Matrix& _matrix;
-    size_t _x;
-    size_t _y;
-};
-
-template<typename DataIterator, typename T, T Default>
-class Iterator
-{
 public:
-	explicit Iterator() = default;
-	explicit Iterator(DataIterator iterator, size_t position, size_t end)
-	: _iterator(iterator)
-	, _position(position)
-	, _end(end)
-	{}
-
-	bool operator== (const Iterator& rhs)
+	Value() = delete;
+	explicit Value(Matrix* matrix, size_t i) : _key({i}), _matrix(matrix), _index(1)
 	{
-		return _position == rhs._position;
+		static_assert(Depth > 0, "Empty depth");
 	}
 
-	bool operator!= (const Iterator& rhs)
+	auto& operator[](size_t i)
 	{
-		return _position != rhs._position;
-	}
-
-	T& operator*()
-	{
-		return (_position == _iterator->first) ? _iterator->second : _default;
-	}
-
-	Iterator& operator++() //++a
-	{
-		incPosition();
+		assert(_index < Depth && "Out of depth");
+		_key[_index] = i;
+		++_index;
 		return *this;
 	}
 
-	Iterator operator++(int) //a++
+	const auto& get() const
 	{
-		Iterator temp{_iterator, _position, _end};
-		incPosition();
-		return temp;
+		assert(_index == Depth && "Wrong depth");
+		return _matrix->get(_key);
 	}
 
-private:
-	void incPosition()
+	T operator=(T value)
 	{
-		++_position;
-		if (_position < _end && _position > _iterator->first)
-		{
-			++_iterator;
-		}
+		assert(_index == Depth && "Wrong depth");
+		_matrix->set(_key, value);
+		return value;
 	}
-
-private:
-	DataIterator _iterator;
-	size_t _position;
-	size_t _end;
-	T _default = Default;
 };
 
-template<typename T, T Default>
-class List
+template<typename Matrix, typename T, size_t Depth = 2>
+std::ostream &operator<<(std::ostream &out, const Value<Matrix, T, Depth>& value)
 {
-public:
-	using Map = std::map<size_t, T>;
-	using MapIterator = typename Map::iterator;
-	using IteratorType = Iterator<MapIterator, T, Default>;
+	return out << value.get();
+}
 
-	auto get(size_t i) const
+template<typename T, T Default, size_t Depth = 2>
+class Matrix
+{
+	using Key = std::array<size_t, Depth>;
+	using Map = std::map<Key, T>;
+
+private:
+	Map _map;
+	const T _default = Default;
+
+public:
+	auto operator[](size_t i)
 	{
-		auto iter = _map.find(i);
-        return iter == _map.end() ? _default : iter->second;
+		return Value<Matrix, T, Depth>(this, i);
 	}
 
-	void set(size_t i, T value)
-	{
-		auto iter = _map.find(i);
-		if (iter == _map.end())
-		{
-			if (!isDefault(value))
-			{
-				_map.emplace(i, value);
-			}
+    const T& get(const Key& key) const
+    {
+        auto iter = _map.find(key);
+        if (iter == _map.end())
+        {
+            return _default;
+        }
+        return iter->second;
+    }
+
+    void set(const Key& key, T value)
+    {
+        auto iter = _map.find(key);
+        if (iter == _map.end())
+        {
+            if (value != Default)
+            {
+				_map.emplace(key, value);
+            }
 			return;
-		}
-		if (isDefault(value))
+        }
+
+        if (value == Default)
 		{
 			_map.erase(iter);
 			return;
 		}
 		iter->second = value;
-	}
-
-	size_t size() const
-    {
-	    return _map.size();
-    }
-
-	size_t length() const
-	{
-        return _map.begin() == _map.end() ? 0 : _map.rbegin()->first + 1;
-	}
-
-	bool isDefault(T value)
-	{
-		return value == _default;
-	}
-
-	IteratorType begin()
-	{
-		return IteratorType{_map.begin(), 0, size()};
-	}
-
-	IteratorType end()
-	{
-		auto length = size();
-		return IteratorType{_map.end(), length, length};
-	}
-
-	IteratorType end(size_t length)
-	{
-		return IteratorType{_map.end(), length, size()};
-	}
-
-	std::string toString(size_t length) const
-    {
-        std::stringstream ss;
-        auto iter = begin();
-        auto _end = end(length);
-        bool space = false;
-
-	    while (iter != _end)
-        {
-            ss << *iter;
-            if (space)
-            {
-                ss << ' ';
-            }
-            space = true;
-        }
-
-	    return ss.str();
-    }
-
-private:
-	Map _map;
-	T _default = Default;
-};
-
-template<typename T, T Default>
-class Matrix
-{
-public:
-	using Type = Matrix<T, Default>;
-	using MapValueType = List<T, Default>;
-	using Map = std::map<size_t, MapValueType>;
-    using MapIterator = typename Map::iterator;
-    using IteratorType = Iterator<MapIterator, T, Default>;
-
-	auto operator[](size_t x)
-	{
-		return ValueProxy<Type, T>{*this, x};
-	}
-
-    T& get(size_t x, size_t y) const
-    {
-        auto iter = _map.find(x);
-        if (iter == _map.end())
-        {
-            return Default;
-        }
-        return iter->second.get(y);
-    }
-
-    void set(size_t x, size_t y, T value)
-    {
-        auto iter = _map.find(x);
-        if (iter == _map.end())
-        {
-            if (value != Default)
-            {
-                auto& list = _map[x];
-                list.set(y, value);
-            }
-            return;
-        }
-        iter->second.set(y, value);
-        if (iter->second.size() == 0)
-        {
-            _map.erase(iter);
-        }
     }
 
     size_t size()
     {
-	    size_t result = 0;
-        for (const auto& p : _map)
-        {
-            result += p.second.size();
-        }
-	    return result;
-    }
-
-    size_t width() const
-    {
-        return _map.begin() == _map.end() ? 0 : _map.rbegin()->first + 1;
-    }
-
-    size_t height() const
-    {
-        size_t result = 0;
-        for(const auto& p : _map)
-        {
-            result += p.second.length();
-        }
-        return result;
+	    return _map.size();
     }
 
     auto begin()
@@ -266,23 +109,4 @@ public:
     {
         _map.end();
     }
-
-private:
-	 Map _map;
 };
-
-template<typename T, T Default>
-std::ostream &operator<<(std::ostream &os, List<T, Default>& list)
-{
-	bool needSpace = false;
-	for (const auto& value : list)
-	{
-		if (needSpace)
-		{
-			os << ' ';
-		}
-		os << value;
-		needSpace = true;
-	}
-	return os;
-}
