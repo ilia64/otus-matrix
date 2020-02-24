@@ -2,6 +2,7 @@
 
 #include <array>
 #include <map>
+#include <cassert>
 
 template<typename Matrix, typename T, size_t Depth = 2>
 class Value
